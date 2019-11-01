@@ -1,0 +1,136 @@
+BASE TABLE component.
+
+EXEC SQL 
+SELECT coiid, hydgrp, compkind, drainagecl, hzdept_r, hzdepb_r, ksat_r 
+FROM component, chorizon
+WHERE join component to chorizon;
+SORT BY coiid, hzdept_r
+AGGREGATE COLUMN hzdept_r NONE, ksat_r NONE. 
+
+# gets depth to water impermeable layer (ksat < 0.01 micrometers/s)
+EXEC SQL
+SELECT hzdept_r hzdpt, ksat_r ks_low 
+FROM component, chorizon
+WHERE JOIN component to chorizon
+AND ksat_r < 0.01;
+SORT by hzdpt
+AGGREGATE COLUMN hzdpt FIRST, ks_low FIRST.
+
+# gets depth to component restriction
+EXEC SQL
+SELECT resdept_r
+FROM component, corestrictions
+Where JOIN component to corestrictions
+AND reskind in ("fragipan", "duripan", "petrocalcic", "ortstein", "petrogypsic", "cemented horizon", "densic material", "placic", "bedrock, paralithic", "bedrock, lithic", "bedrock, densic", "permafrost");
+SORT BY resdept_r
+AGGREGATE COLUMN resdept_r FIRST.
+
+# gets ksat of least transmissive layer that is within a depth of 50 cm.
+EXEC SQL
+SELECT  hzdept_r hzpt2, ksat_r min_ks
+FROM component, chorizon
+WHERE JOIN component to chorizon AND hzdept_r <= 50;
+SORT by hzpt2
+AGGREGATE COLUMN min_ks MIN.
+
+# gets ksat of least transmissive layer that is within a depth of 100 cm.
+EXEC SQL
+SELECT  hzdept_r hzpt3, ksat_r min_ks2, ksat_r ks_null
+FROM component, chorizon
+WHERE JOIN component to chorizon AND hzdept_r <= 100;
+SORT by hzpt3
+AGGREGATE COLUMN min_ks2 MIN, ks_null NONE.
+
+# Gets ksats within a depth of 100 cm.
+EXEC SQL
+SELECT  hzdept_r hzpt5, ksat_r ks_null2, texture
+FROM component
+	INNER join chorizon by default
+	INNER join chtexturegrp by default 
+		and chtexturegrp.rvindicator = 1
+		and hzdept_r <= 100 
+		and texture not matches "*MPM*" AND texture not matches "*SPM*" AND texture not matches "*HPM*";
+SORT by hzpt5
+AGGREGATE COLUMN ks_null2 NONE, texture none.
+
+# gets ksat of least transmissive layer that is within a depth of 60 cm; used in dual HSG group assignment.
+EXEC SQL
+SELECT  hzdept_r hzpt4, ksat_r min_ks60
+FROM component, chorizon
+WHERE JOIN component to chorizon AND hzdept_r <= 60;
+SORT by hzpt4
+AGGREGATE COLUMN min_ks60 MIN.
+
+# gets months when soil moisture is "wet" above 100 cm.
+EXEC SQL
+SELECT soimoiststat, comonth.month month1
+FROM component, comonth, cosoilmoist  
+WHERE JOIN component to comonth and join comonth to cosoilmoist 
+and soimoiststat = "wet" and soimoistdept_r <= 100;
+SORT BY month1 ASC
+AGGREGATE COLUMN month1 SUM.
+
+# gets months when soil moisture is "wet" above 60 cm.
+EXEC SQL
+SELECT soimoiststat smst, comonth.month mnth
+FROM component, comonth, cosoilmoist
+WHERE JOIN component to comonth and join comonth to cosoilmoist 
+and soimoiststat = "wet" and soimoistdept_r < 60; # was <= 60
+SORT BY mnth ASC
+AGGREGATE COLUMN mnth SUM.
+
+
+#------------------------------------------------------------------------------
+
+DEFINE drainagecl2	CODENAME(drainagecl).
+
+DEFINE ksnulls	ARRAYSUM(ks_null).
+
+# Determines the depth to a water impermeable layer; either Ksat < 0.01 or component restriction, which ever is shallower.
+DEFINE water_restrc	IF ISNULL(resdept_r) THEN hzdpt
+			ELSE IF ISNULL(hzdpt) THEN resdept_r
+			ELSE IF resdept_r <= hzdpt THEN resdept_r
+			ELSE hzdpt.
+
+		# Table 7 of Chapter 7, part 630 of the National Engineering Handbook
+DEFINE HSG	IF (mnth > 0 AND NOT ISNULL(mnth)) OR (NOT ISNULL(water_restrc) AND water_restrc < 50) THEN 4 #"d"
+		ELSE IF ((month1 > 0 AND NOT ISNULL(month1)) OR (NOT ISNULL(water_restrc) AND water_restrc <= 100)) AND (min_ks <= 1.0 AND NOT ISNULL(min_ks)) THEN 4 #"d"
+		ELSE IF ((month1 > 0 AND NOT ISNULL(month1)) OR (NOT ISNULL(water_restrc) AND water_restrc <= 100)) AND (min_ks <= 10 AND NOT ISNULL(min_ks)) THEN 3 #"c"
+		ELSE IF ((month1 > 0 AND NOT ISNULL(month1)) OR (NOT ISNULL(water_restrc) AND water_restrc <= 100)) AND (min_ks <= 40 AND NOT ISNULL(min_ks)) THEN 2 #"b"
+		ELSE IF ((month1 > 0 AND NOT ISNULL(month1)) OR (NOT ISNULL(water_restrc) AND water_restrc <= 100)) AND (min_ks > 40 AND NOT ISNULL(min_ks)) THEN 1 #"a"
+		
+		ELSE IF (min_ks2 <= 0.4 AND NOT ISNULL(min_ks2) AND (water_restrc > 100 OR ISNULL(water_restrc)) AND ISNULL(month1)) THEN 4 #"d"
+		ELSE IF ISNULL(month1) AND ((NOT ISNULL(water_restrc) AND water_restrc > 100) OR ISNULL(water_restrc)) AND (min_ks2 <= 4.0 AND NOT ISNULL(min_ks2)) THEN 3 #"c"
+		ELSE IF ISNULL(month1) AND ((NOT ISNULL(water_restrc) AND water_restrc > 100) OR ISNULL(water_restrc)) AND (min_ks2 <= 10.0 AND NOT ISNULL(min_ks2)) THEN 2 #"b"
+		ELSE IF ISNULL(month1) AND ((NOT ISNULL(water_restrc) AND water_restrc > 100) OR ISNULL(water_restrc)) AND (min_ks2 > 10 AND NOT ISNULL(min_ks2)) THEN 1 #"a"
+		ELSE 1/0.
+
+		# Assign dual hydrologic soil groups a/d, b/d, or c/d.		
+ASSIGN HSG	IF mnth > 0 AND NOT ISNULL(mnth) AND NOT ISNULL(water_restrc) AND water_restrc <= 100 AND min_ks60 > 40 AND NOT ISNULL(min_ks60) THEN 5 #"a/d"
+		ELSE IF mnth > 0 AND NOT ISNULL(mnth) AND NOT ISNULL(water_restrc) AND water_restrc <= 100 AND min_ks60 > 10.0 AND NOT ISNULL(min_ks60) THEN 6 #"b/d"
+		ELSE IF mnth > 0 AND NOT ISNULL(mnth) AND NOT ISNULL(water_restrc) AND water_restrc <= 100 AND min_ks60 > 1.0 AND NOT ISNULL(min_ks60) THEN 7 #"c/d"
+
+		ELSE IF mnth > 0 AND NOT ISNULL(mnth) AND ((NOT ISNULL(water_restrc) AND water_restrc > 100) OR ISNULL(water_restrc)) AND min_ks2 > 10 AND NOT ISNULL(min_ks2) THEN 5 #"a/d"
+		ELSE IF mnth > 0 AND NOT ISNULL(mnth) AND ((NOT ISNULL(water_restrc) AND water_restrc > 100) OR ISNULL(water_restrc)) AND min_ks2 > 4.0 AND NOT ISNULL(min_ks2) THEN 6 #"b/d"
+		ELSE IF mnth > 0 AND NOT ISNULL(mnth) AND ((NOT ISNULL(water_restrc) AND water_restrc > 100) OR ISNULL(water_restrc)) AND min_ks2 > 0.4 AND NOT ISNULL(min_ks2) THEN 7 #"c/d"
+		ELSE HSG.
+		
+		# Checks for any null Ksats within 100 cm; HSG is not calculated if there is a null ksat.
+		# Also, HSG is not calculated for miscellaneous areas.
+ASSIGN HSG	#IF ISNULL(resdept_r) AND ANY ISNULL(ks_null) THEN 1/0 
+			#ELSE IF NOT ISNULL(resdept_r) AND resdept_r > 100 AND ANY ISNULL(ks_null) THEN 1/0
+			IF ISNULL(ksnulls) THEN null
+			ELSE IF CODENAME(compkind) matches "miscellaneous area" THEN null
+			ELSE HSG.
+
+# Makes sure subaqueous soils (wassents and wassists) are not assigned a dual group.
+ASSIGN HSG	IF drainagecl2 == "subaqueous" THEN 4 ELSE HSG.
+
+#WHEN isnull(hzdpt) or not isnull(hzdpt)
+#display "%s" ks_null2.
+
+SET hydgrp from HSG.
+
+WHEN ((ISNULL(resdept_r) AND ANY ISNULL(ks_null2)) or (NOT ISNULL(resdept_r) AND resdept_r > 100 AND ANY ISNULL(ks_null2)) or ISNULL(ksnulls))
+	and not CODENAME(compkind) matches "miscellaneous area" 
+DISPLAY "WARNING: There are layers with a null Ksat within a 100 cm depth.".

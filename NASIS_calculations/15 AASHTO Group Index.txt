@@ -1,0 +1,52 @@
+#
+BASE TABLE chorizon.
+
+EXEC SQL select sieveno200_l, sieveno200_r, sieveno200_h, ll_l, ll_r, ll_h, pi_l, pi_r, pi_h, aashtocl
+from chorizon, outer chaashto
+where join chorizon to chaashto;.
+
+DEFINE aashto_class	CODENAME(aashtocl).
+DEFINE skip_ll		ANY (aashto_class == "a-2-6" or aashto_class == "a-2-7").
+
+DEFINE aashind_l	.01*(sieveno200_l-15)*(pi_l-10).
+DEFINE aashind_r	.01*(sieveno200_r-15)*(pi_r-10).
+DEFINE aashind_h	.01*(sieveno200_h-15)*(pi_h-10).
+
+ASSIGN aashind_l	IF skip_ll OR (sieveno200_l<35 and pi_l>=10) THEN aashind_l 
+					ELSE (sieveno200_l - 35)*(.2 + .005*(ll_l - 40)) + aashind_l.
+ASSIGN aashind_r	IF skip_ll OR (sieveno200_r<35 and pi_r>=10) THEN aashind_r 
+					ELSE (sieveno200_r - 35)*(.2 + .005*(ll_r - 40)) + aashind_r.
+ASSIGN aashind_h	IF skip_ll OR (sieveno200_h<35 and pi_h>=10) THEN aashind_h 
+					ELSE (sieveno200_h - 35)*(.2 + .005*(ll_h - 40)) + aashind_h.
+
+ASSIGN aashind_l	IF pi_l == 0 OR (aashind_l < 0 AND NOT ISNULL(aashind_l)) THEN 0 ELSE aashind_l.
+ASSIGN aashind_r	IF pi_r == 0 OR (aashind_r < 0 AND NOT ISNULL(aashind_r)) THEN 0 ELSE aashind_r.
+ASSIGN aashind_h	IF pi_h == 0 OR (aashind_h < 0 AND NOT ISNULL(aashind_h)) THEN 0 ELSE aashind_h.
+
+#ASSIGN aashind_l	IF aashind_l > aashind_r THEN aashind_r ELSE aashind_l.
+
+# Ensures that low values are lower than the high values and vise versa.
+DEFINE aslow	IF aashind_l > aashind_h and not isnull(aashind_h) THEN aashind_h 
+				ELSE IF aashind_l > aashind_r THEN aashind_r
+				ELSE aashind_l.
+DEFINE asrv		IF aashind_r > aashind_h and not isnull(aashind_h) THEN aashind_h
+				ELSE IF aashind_r < aashind_l THEN aashind_l
+				ELSE aashind_r.
+DEFINE ashigh	IF aashind_h < aashind_l and not isnull(aashind_h) THEN aashind_l 
+				ELSE IF aashind_h < aashind_r and not isnull(aashind_h) THEN aashind_r
+				ELSE aashind_h.
+
+ASSIGN aashind_l	aslow.
+ASSIGN aashind_r	asrv.
+ASSIGN aashind_h	ashigh.
+
+# Organic soils are set to null.
+ASSIGN aashind_l	IF any aashto_class == "a-8" then null else aashind_l.
+ASSIGN aashind_r	IF any aashto_class == "a-8" then null else aashind_r.
+ASSIGN aashind_h	IF any aashto_class == "a-8" then null else aashind_h.
+
+ASSIGN aashind_l	round(aashind_l).
+ASSIGN aashind_r	round(aashind_r).
+ASSIGN aashind_h	round(aashind_h).
+
+SET aashind_l, aashind_r, aashind_h.

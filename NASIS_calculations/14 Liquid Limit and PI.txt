@@ -1,0 +1,113 @@
+BASE TABLE chorizon.
+
+EXEC SQL select lep_r, om_r, claytotal_r, claysizedcarb_r, lep_l, om_l, claytotal_l, claysizedcarb_l, lep_h, om_h, claytotal_h, claysizedcarb_h,
+	sandtotal_l, sandtotal_r, sandtotal_h
+from chorizon;.
+
+
+# Use zero if inputs are null.
+DEFINE oml	IF ISNULL(om_l) THEN null ELSE om_l.
+DEFINE omh	IF ISNULL(om_h) THEN null ELSE om_h.
+DEFINE om	IF ISNULL(om_r) THEN (oml + omh)/2 ELSE om_r.
+
+DEFINE lepl	IF ISNULL(lep_l) THEN null ELSE lep_l.
+DEFINE leph	IF ISNULL(lep_h) THEN null ELSE lep_h.
+DEFINE lep	IF ISNULL(lep_r) THEN (lepl + leph)/2 ELSE lep_r.
+
+DEFINE claytotall	IF ISNULL(claytotal_l) THEN null ELSE claytotal_l.
+DEFINE claytotalh	IF ISNULL(claytotal_h) THEN null ELSE claytotal_h.
+DEFINE claytotal	IF ISNULL(claytotal_r) THEN (claytotall + claytotalh)/2 ELSE claytotal_r.
+
+DEFINE claysizedcarbh	IF ISNULL(claysizedcarb_h) THEN 0 ELSE claysizedcarb_h.
+DEFINE claysizedcarbl	IF ISNULL(claysizedcarb_l) THEN 0 ELSE claysizedcarb_l.
+DEFINE claysizedcarb	IF ISNULL(claysizedcarb_r) THEN (claysizedcarbl + claysizedcarbh)/2 ELSE claysizedcarb_r.
+
+DEFINE ncclayl		claytotall - claysizedcarbh.
+DEFINE ncclayh		claytotalh - claysizedcarbl.
+DEFINE ncclay		claytotal - claysizedcarb.
+
+# Checks for negative non-carbonate clay (low).
+ASSIGN ncclayl	IF ncclayl < 0 and not isnull(ncclayl) THEN 0 ELSE ncclayl.
+
+# Calculate the 15 bar water content (low) on a gravimetric basis.
+# Assume ratio of 1500KPa to Clay percent is 0.4
+DEFINE F INITIAL 0.4.
+DEFINE wfifteenbarl (claytotall * (1 - oml/100) * F + oml).
+DEFINE wfifteenbarh (claytotalh * (1 - omh/100) * F + omh).
+DEFINE wfifteenbar 	(claytotal * (1 - om/100) * F + om).
+
+# Calculate the pi assuming all inputs are in range.
+DEFINE pi_l	-1.86 + 0.69*wfifteenbarl - 0.69*oml + 0.13*lepl + 0.47*ncclayl.
+DEFINE pi_h	-1.86 + 0.69*wfifteenbarh - 0.69*omh + 0.13*leph + 0.47*ncclayh.
+DEFINE pi_r	-1.86 + 0.69*wfifteenbar - 0.69*om + 0.13*lep + 0.47*ncclay.
+
+# Calculate the ll assuming all inputs are in range.
+DEFINE ll_l	11.6 + 1.49*wfifteenbarl + 0.78*oml + 0.6*lepl + 0.26*ncclayl.
+DEFINE ll_h	11.6 + 1.49*wfifteenbarh + 0.78*omh + 0.6*leph + 0.26*ncclayh.
+DEFINE ll_r	11.6 + 1.49*wfifteenbar + 0.78*om + 0.6*lep + 0.26*ncclay.
+
+# Nonplastic soils
+#ASSIGN pi_r	IF ((claytotal_r <= 10 and sandtotal_r >= 80) or (claytotal_r <= 8 and sandtotal_r >= 75) or 
+#			(claytotal_r <= 6 and sandtotal_r > 65) or (claytotal_r <= 5 and sandtotal_r > 50)) and not isnull(claytotal_r) then 0 else pi_r.
+#ASSIGN pi_l IF (claytotal_l <= 10 and sandtotal_h >= 80 or (claytotal_l <= 8 and sandtotal_h >= 75) or 
+#			(claytotal_l <= 6 and sandtotal_h > 65) or (claytotal_l <= 5 and sandtotal_h > 50)) and not isnull(claytotal_l) then 0 else pi_l.
+#ASSIGN pi_h IF (claytotal_h <= 10 and sandtotal_l >= 80 or (claytotal_h <= 8 and sandtotal_l >= 75) or 
+#			(claytotal_h <= 6 and sandtotal_l > 65) or (claytotal_h <= 5 and sandtotal_l > 50)) and not isnull(claytotal_h) then 0 else pi_h.
+
+# Check for inputs out of range and set results to null.
+
+ASSIGN pi_r	IF ISNULL(claytotal_r) OR om > 25 OR ncclay < 0 THEN null ELSE pi_r.
+ASSIGN ll_r	IF ISNULL(claytotal_r) OR om > 25 OR ncclay < 0 THEN null ELSE ll_r.
+ASSIGN pi_l	IF ISNULL(claytotal_l) OR oml > 25 OR ncclayl < 0 THEN null ELSE pi_l.
+ASSIGN ll_l	IF ISNULL(claytotal_l) OR oml > 25 OR ncclayl < 0 THEN null ELSE ll_l.
+ASSIGN pi_h	IF ISNULL(claytotal_h) OR omh > 25 OR ncclayh < 0 THEN null ELSE pi_h.
+ASSIGN ll_h	IF ISNULL(claytotal_h) OR omh > 25 OR ncclayh < 0 THEN null ELSE ll_h.
+
+# If calculated PI is negative, set both PI and LL to zero.
+
+ASSIGN pi_r	IF NOT ISNULL(pi_r) AND pi_r < 0 THEN 0 ELSE pi_r.
+ASSIGN ll_r	IF ISNULL(pi_r) THEN null ELSE IF pi_r < 0.5 OR (NOT ISNULL(ll_r) AND ll_r < 15) THEN 0 ELSE ll_r.
+ASSIGN pi_l	IF NOT ISNULL(pi_l) AND (pi_l < 0 or pi_r==0) THEN 0 ELSE pi_l.
+ASSIGN ll_l	IF ISNULL(pi_l) THEN null ELSE IF pi_l < 0.5 OR (NOT ISNULL(ll_l) AND ll_l < 15) THEN 0 ELSE ll_l.
+ASSIGN pi_h	IF NOT ISNULL(pi_h) AND pi_h < 0 or (pi_r==0 and pi_l==0 and pi_h < 0.5) THEN 0 ELSE pi_h.
+ASSIGN ll_h	IF ISNULL(pi_h) THEN null #ELSE IF pi_h < 0.5 then 0
+			ELSE IF pi_h < 0.5 OR (NOT ISNULL(ll_h) AND ll_h < 15) THEN 14 ELSE ll_h.
+
+#Set results to interger values.
+
+ASSIGN pi_r ROUND(pi_r).
+ASSIGN ll_r	ROUND(ll_r).
+ASSIGN pi_l	ROUND(pi_l).
+ASSIGN ll_l	ROUND(ll_l).
+ASSIGN pi_h	ROUND(pi_h).
+ASSIGN ll_h	ROUND(ll_h).
+
+#----------------------------------------
+# Aligns the rv LL and PI with the lows and highs.
+DEFINE slope		(pi_h - pi_l)/(ll_h - ll_l).
+DEFINE intercept	pi_h - (slope*ll_h).
+
+ASSIGN pi_r		IF not isnull(ll_h) and not isnull(ll_l) and not isnull(pi_h) and not isnull(pi_l) and pi_h != 0 
+					then ROUND((ll_r*slope) + intercept) else pi_r.
+
+#----------------------------------------
+
+# Store results (some of which may be null).
+SET pi_l, pi_r, pi_h, ll_l, ll_r, ll_h.
+
+# Display messages if inputs are out of range.
+WHEN om > 25 DISPLAY
+"Could not calculate PI and LL rv because organic matter rv is > 25% for this horizon.".
+WHEN ncclay < 0 and not isnull(ncclay) 
+DISPLAY "ERROR: Calculation failed. Clay sized carbonate rv is > clay total separate rv.".
+WHEN oml > 25 DISPLAY
+"Could not calculate PI and LL low because organic matter low is > 25% for this horizon.".
+WHEN ncclayl < 0 and not isnull(ncclayl)  
+DISPLAY "ERROR: Calculation failed. Clay sized carbonate low is > clay total separate low.".
+WHEN omh > 25 DISPLAY
+"Could not calculate PI and LL high because organic matter high is > 25% for this horizon.".
+WHEN ncclayh < 0 and not isnull(ncclayh) 
+DISPLAY "ERROR: Calculation failed. Clay sized carbonate high is > clay total separate high.".
+#WHEN ISNULL(claytotal_r) DISPLAY "Could not calculate PI and LL rv because clay total rv is NULL.".
+#WHEN ISNULL(claytotal_l) DISPLAY "Could not calculate PI and LL rv because clay total low is NULL.".
+#WHEN ISNULL(claytotal_h) DISPLAY "Could not calculate PI and LL rv because clay total high is NULL.".
