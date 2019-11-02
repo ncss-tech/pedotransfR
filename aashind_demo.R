@@ -1,9 +1,11 @@
 library(aqp)
 library(soilDB)
+library(pedotransfR)
 
 # use soilDB fetch function to get some soils information from SDA 
 #   these are soils with varying amounts of ASP -- wide range in aashto gin
-f <- fetchSDA_component(WHERE = "compname IN ('Mantree','Redapple','Devilsnose','Lilygap')")
+f <- fetchSDA_component(WHERE = "compname IN ('Mantree','Redapple',
+                        'Devilsnose','Lilygap')")
 
 # optional: subset with e.g. subsetProfiles()
 f.sub <- f
@@ -44,7 +46,7 @@ depths(newspc) <- cokey ~ hzdept_r + hzdepb_r
 
 # merge component_AASHTO_GIN() result into horizon table
 horizons(newspc) <- merge(horizons(newspc), 
-                          component_AASHTO_GIN(newspc, floor), 
+                          component_aashind(newspc, floor), 
                           by = c(idname(newspc), hzidname(newspc)))
 
 # fit linear model to stored versus calculated
@@ -69,17 +71,20 @@ legend("bottomright", legend = c("Model", "1:1"),
 abline(m0, col = "red", lwd = 2)
 abline(0, 1, col = "blue", lwd = 2, lty = 2)
 
-## TODO: mention this to dylan and cathy -- CVIR round is used in NASIS
+## TODO: mention this to dylan and cathy -- CVIR round() is used in NASIS
 ##       but in order to match data populated in SDA need to use floor()
+
 ## compare using floor() (above) with round
-# roundgin <- component_AASHTO_GIN(newspc, FUN=round, digits=1)
+# roundgin <- component_aashind(newspc, FUN=round, digits=1)
 # names(roundgin) <- c(names(roundgin)[1:2],
 #                      "round_aashind_l","round_aashind_r","round_aashind_h")
 # 
-# # merge component_AASHTO_GIN() result into horizon table
+## merge component_aashind() result into horizon table
 # horizons(newspc) <- merge(horizons(newspc), roundgin, 
 #                           by = c(idname(newspc), hzidname(newspc)))
 # 
+## slightly higher than calculated values extracted from ssurgo/nasis
 # points(newspc$round_aashind_r ~ newspc$aashind_r, pch="*")
-# names(table(newspc$aashind_r))
-# 
+#
+## certain values never occur in aashind
+# table(newspc$aashind_r)

@@ -1,215 +1,109 @@
-# SoilTaxonomy
+# pedotransfR
 
-## Installation
+## Installation of R package
 
-Install dependencies from CRAN
+<!--Install dependencies from CRAN
 
 ```r
 install.packages(c('stringdist', 'purrr', 'stringi', 'data.tree'), dep=TRUE)
 ```
+-->
 
-Get the development version from Github. The latest this will require the latest version of `remotes`.
+Get the latest development version from GitHub. This will require the latest version of `remotes` -- install that first from CRAN if you need it.
 
 ```r
-remotes::install_github("ncss-tech/SoilTaxonomy/R_pkg", dependencies=FALSE, upgrade=FALSE, build=FALSE)
+remotes::install_github("ncss-tech/pedotransfR/R_pkg", dependencies=FALSE, upgrade=FALSE, build=FALSE)
 ```
 
-## Basic Usage
+## Example: Compare Stored versus Calculated (in R) for some component data retrieved from Soil Data Access (SDA)
+
 ```r
-library(SoilTaxonomy)
+library(aqp)
+library(soilDB)
+library(pedotransfR)
 
-# hierarchy to the subgroup
-data("ST", package = 'SoilTaxonomy')
+# use soilDB fetch function to get some soils information from SDA 
+#   these are soils with varying amounts of ASP -- wide range in aashto gin
+f <- fetchSDA_component(WHERE = "compname IN ('Mantree','Redapple',
+                        'Devilsnose','Lilygap')")
 
-# unique taxa
-data("ST_unique_list", package = 'SoilTaxonomy')
+# optional: subset with e.g. subsetProfiles()
+f.sub <- f
 
-# formative element dictionaries
-data('ST_formative_elements', package = 'SoilTaxonomy')
+# construct custom SDA queries to get more information about the above components
+comp.q <- paste0("SELECT * FROM component 
+                  WHERE cokey IN ", 
+                    format_SQL_in_statement(site(f)$cokey), ";")
+comp <- SDA_query(comp.q)
 
+# get all horizon data corresponding to above components
+hz.q <- paste0("SELECT * FROM chorizon 
+                WHERE cokey IN ", 
+                  format_SQL_in_statement(comp$cokey), 
+                  " ORDER BY hzdept_r;")
+hz <- SDA_query(hz.q) 
 
-# label formative elements in the hierarchy with brief explanations
-cat(explainST('typic endoaqualfs'))
+# get all aashto data corresponding to above horizons
+aashto.q <- paste0("SELECT * FROM chaashto 
+                     WHERE chkey IN ", 
+                      format_SQL_in_statement(hz$chkey), 
+                      "AND rvindicator = 'Yes';")
+aashto <- SDA_query(aashto.q)
 
-cat(explainST('abruptic haplic durixeralfs'))
+if(length(aashto)) {
+  hz <- merge(hz, aashto[,c('aashtocl','chkey')], by="chkey")
+} else {
+# if there is no aashto data, fill in the aashtocl column so it is present (NA)
+  hz$aashtocl <- NA  
+}
 
-cat(explainST('aeric umbric endoaqualfs'))
+# optional method for catching organic horizons that have GIN = NULL
+# hz$aashtocl[grepl(hz$hzname, pattern="O")] <- "A-8"
+
+# construct an SPC with the full SSURGO data from SDA
+newspc <- hz
+depths(newspc) <- cokey ~ hzdept_r + hzdepb_r
+
+# merge component_AASHTO_GIN() result into horizon table
+horizons(newspc) <- merge(horizons(newspc), 
+                          component_aashind(newspc, floor), 
+                          by = c(idname(newspc), hzidname(newspc)))
+
+# fit linear model to stored versus calculated
+m0 <- lm(newspc$calc_aashind_r ~ newspc$aashind_r)
+statz <- m0[[1]]
+
+# ensure model intercept is 0 and slope is 1
+all.eq <- all.equal.numeric(as.numeric(m0[[1]]), c(0,1))
+
+# make a plot -- visually check for (lack of) fit
+par(mar=c(5.5, 5.5, 5.5, 5.5))
+plot(newspc$calc_aashind_r ~ newspc$aashind_r,
+     xlab = "AASHTO Group Index Number\nStored (NASIS/SSURGO)",
+     ylab = "AASHTO Group Index Number\nCalculated (R package)",
+     xlim = c(0, max(newspc$aashind_r, na.rm = T)), 
+     ylim = c(0, max(newspc$calc_aashind_r, na.rm = T)))
+text(15,35, paste("m = ", m0$coefficients[2], "\n",
+                  "b = ", m0$coefficients[1], "\n",
+                  "1:1", all.eq))
+legend("bottomright", legend = c("Model", "1:1"), 
+       lwd = 2, lty = c(1,2), col = c("red","blue"))
+abline(m0, col = "red", lwd = 2)
+abline(0, 1, col = "blue", lwd = 2, lty = 2)
+
+## TODO: mention this to dylan and cathy -- CVIR round is used in NASIS
+##       but in order to match data populated in SDA need to use floor()
+## compare using floor() (above) with round
+# roundgin <- component_AASHTO_GIN(newspc, FUN=round, digits=1)
+# names(roundgin) <- c(names(roundgin)[1:2],
+#                      "round_aashind_l","round_aashind_r","round_aashind_h")
+# 
+# # merge component_AASHTO_GIN() result into horizon table
+# horizons(newspc) <- merge(horizons(newspc), roundgin, 
+#                           by = c(idname(newspc), hzidname(newspc)))
+# 
+# points(newspc$round_aashind_r ~ newspc$aashind_r, pch="*")
+# names(table(newspc$aashind_r))
+# 
 ```
-
 ```
-typic endoaqualfs
-|     |   |  |                                                                                      
-central theme of subgroup concept                                                                   
-      |   |  |                                                                                      
-      ground water table                                                                            
-          |  |                                                                                      
-          characteristics associated with wetness                                                   
-             |                                                                                      
-             soils with an argillic, kandic, or natric horizon
-             
-
-abruptic haplic durixeralfs
-|        |      |   |  |                                                                            
-abrupt textural change                                                                              
-         |      |   |  |                                                                            
-         central theme of subgroup concept                                                          
-                |   |  |                                                                            
-                presence of a duripan                                                               
-                    |  |                                                                            
-                    xeric SMR                                                                       
-                       |                                                                            
-                       soils with an argillic, kandic, or natric horizon                  
-
-                       
-aeric umbric endoaqualfs
-|     |      |   |  |                                                                               
-more aeration than typic subgroup                                                                   
-      |      |   |  |                                                                               
-      presence of an umbric epipedon                                                                
-             |   |  |                                                                               
-             ground water table                                                                     
-                 |  |                                                                               
-                 characteristics associated with wetness                                            
-                    |                                                                               
-                    soils with an argillic, kandic, or natric horizon   
-```
-
-## data.tree
-
-Inverted hierarchy
-```r
-# load the full hierarchy at the subgroup level
-data("ST", package = 'SoilTaxonomy')
-
-# pick 10 taxa
-x <- ST[sample(1:nrow(ST), size = 10), ]
-
-# construct path
-# note: must include a top-level ("ST") in the hierarchy
-path <- with(x, paste('ST', tax_subgroup, tax_greatgroup, tax_suborder, tax_order, sep = '/'))
-
-# convert to data.tree object
-n <- as.Node(data.frame(pathString=path), pathDelimiter = '/')
-
-# print
-print(n, limit=NULL)
-```
-<pre style="font-size: 10em;">
-1  ST                           
-2   ¦--humic inceptic eutroperox
-3   ¦   °--eutroperox           
-4   ¦       °--perox            
-5   ¦           °--oxisols      
-6   ¦--xeric calcigypsids       
-7   ¦   °--calcigypsids         
-8   ¦       °--gypsids          
-9   ¦           °--aridisols    
-10  ¦--hydric melanaquands      
-11  ¦   °--melanaquands         
-12  ¦       °--aquands          
-13  ¦           °--andisols     
-14  ¦--aquic humicryods         
-15  ¦   °--humicryods           
-16  ¦       °--cryods           
-17  ¦           °--spodosols    
-18  ¦--aquic pachic hapludolls  
-19  ¦   °--hapludolls           
-20  ¦       °--udolls           
-21  ¦           °--mollisols    
-22  ¦--alfic haplustands        
-23  ¦   °--haplustands          
-24  ¦       °--ustands          
-25  ¦           °--andisols     
-26  ¦--humic sombriperox        
-27  ¦   °--sombriperox          
-28  ¦       °--perox            
-29  ¦           °--oxisols      
-30  ¦--grossarenic endoaquults  
-31  ¦   °--endoaquults          
-32  ¦       °--aquults          
-33  ¦           °--ultisols     
-34  ¦--ustic gypsiargids        
-35  ¦   °--gypsiargids          
-36  ¦       °--argids           
-37  ¦           °--aridisols    
-38  °--fibric haplohemists      
-39      °--haplohemists         
-40          °--hemists          
-41              °--histosols
-</pre>
-
-(pending) Examples related to linked external data.
-<pre style="font-size: 10em;">
-                                  levelName       ac
-1  xeralfs                                     16554816
-2   ¦--durixeralfs                              1704451
-3   ¦   ¦--abruptic durixeralfs                  923662
-4   ¦   ¦--abruptic haplic durixeralfs            30118
-5   ¦   ¦--aquic durixeralfs                       7267
-6   ¦   ¦--haplic durixeralfs                     49027
-7   ¦   ¦--natric durixeralfs                    158112
-8   ¦   ¦--typic durixeralfs                     536265
-9   ¦   °--vertic durixeralfs                         0
-10  ¦--fragixeralfs                              141400
-11  ¦   ¦--andic fragixeralfs                         0
-12  ¦   ¦--aquic fragixeralfs                       924
-13  ¦   ¦--inceptic fragixeralfs                      0
-14  ¦   ¦--mollic fragixeralfs                    31906
-15  ¦   ¦--typic fragixeralfs                         0
-16  ¦   °--vitrandic fragixeralfs                108570
-17  ¦--haploxeralfs                            11721233
-18  ¦   ¦--andic haploxeralfs                    316458
-19  ¦   ¦--aquandic haploxeralfs                  27437
-20  ¦   ¦--aquic haploxeralfs                     88948
-21  ¦   ¦--aquultic haploxeralfs                 160574
-22  ¦   ¦--calcic haploxeralfs                   131105
-23  ¦   ¦--fragiaquic haploxeralfs                 1350
-24  ¦   ¦--fragic haploxeralfs                     1431
-25  ¦   ¦--inceptic haploxeralfs                   1392
-26  ¦   ¦--lamellic haploxeralfs                  15241
-27  ¦   ¦--lithic haploxeralfs                   236502
-28  ¦   ¦--lithic mollic haploxeralfs            597510
-29  ¦   ¦--lithic ruptic-inceptic haploxeralfs   190796
-30  ¦   ¦--mollic haploxeralfs                  2339766
-31  ¦   ¦--natric haploxeralfs                    96027
-32  ¦   ¦--plinthic haploxeralfs                      0
-33  ¦   ¦--psammentic haploxeralfs                16987
-34  ¦   ¦--typic haploxeralfs                   2033127
-35  ¦   ¦--ultic haploxeralfs                   4827155
-36  ¦   ¦--vertic haploxeralfs                     9889
-37  ¦   °--vitrandic haploxeralfs                629538
-38  ¦--palexeralfs                              2393894
-39  ¦   ¦--andic palexeralfs                      43332
-40  ¦   ¦--aquandic palexeralfs                   21924
-41  ¦   ¦--aquic palexeralfs                     201617
-42  ¦   ¦--arenic palexeralfs                         0
-43  ¦   ¦--calcic palexeralfs                        41
-44  ¦   ¦--fragiaquic palexeralfs                     0
-45  ¦   ¦--fragic palexeralfs                         0
-46  ¦   ¦--haplic palexeralfs                     28882
-47  ¦   ¦--lamellic palexeralfs                       0
-48  ¦   ¦--mollic palexeralfs                    549189
-49  ¦   ¦--natric palexeralfs                     33585
-50  ¦   ¦--petrocalcic palexeralfs                 3221
-51  ¦   ¦--plinthic palexeralfs                       0
-52  ¦   ¦--psammentic palexeralfs                     0
-53  ¦   ¦--typic palexeralfs                     491630
-54  ¦   ¦--ultic palexeralfs                     812194
-55  ¦   ¦--vertic palexeralfs                     11073
-56  ¦   °--vitrandic palexeralfs                 197206
-57  ¦--natrixeralfs                              418472
-58  ¦   ¦--aquic natrixeralfs                     53619
-59  ¦   ¦--typic natrixeralfs                    358187
-60  ¦   °--vertic natrixeralfs                     6666
-61  ¦--rhodoxeralfs                              175366
-62  ¦   ¦--calcic rhodoxeralfs                        0
-63  ¦   ¦--inceptic rhodoxeralfs                      0
-64  ¦   ¦--lithic rhodoxeralfs                        0
-65  ¦   ¦--petrocalcic rhodoxeralfs                   0
-66  ¦   ¦--typic rhodoxeralfs                    172935
-67  ¦   °--vertic rhodoxeralfs                     2431
-68  °--plinthoxeralfs                                 0
-69      °--typic plinthoxeralfs                       0
-</pre>
-
-

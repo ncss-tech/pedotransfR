@@ -1,25 +1,39 @@
 # 15 AASHTO Group Index 
-# @purpose: Encode AASHTO Group Index Number (GIN) NASIS calculation into R pedotransfer function. 
-#           Also, provides wrapper functions for dealing with L-RV-H and NASIS component SoilProfileCollections
-
+# @purpose: Encode AASHTO Group Index Number (GIN) NASIS calculation into 
+#           R pedotransfer function. 
+# @author: Cathy Seybold
+# @contributor: Andrew G. Brown
+# @last_update: 11/02/2019
+# @nasis_last_update: 03/15/2018
 # @inputs: 
 # - % Passing #200 Sieve (sieveno200)
 # - Liquid Limit (ll)
 # - Plasticity Index (pi)
 # - [optional] AASHTO Class (to identify A-2-6, A-2-7 & A-8)
 
-# @author: Cathy Seybold
-# @contributor: Andrew G. Brown
-# @last_update: 11/02/2019
-# @nasis_last_update: 03/15/2018
-
-# pedotransfer function for aashto group index
-ptf_aashind <- function(.sieveno200,  .ll, .pi, .aashtocl) {
-  # calculate aashto group index number -- base calc uses #200 sieve and Plasticity Index
+#' @title AASHTO Group Index
+#' @description R pedotransfer function derived from AASHTO Group Index NASIS calculation.
+#' @param .sieveno200 A numeric vector containing \% Passing #200 Sieve.
+#' @param .ll A numeric vector containing Liquid Limit.
+#' @param .pi A numeric vector containing Plasticity Index.
+#' @param .aashtocl optional: A character vector containing AASHTO Class 
+#'  (to identify A-2-6, A-2-7 & A-8). default: NULL;
+#' @return A numeric vector containing calculated AASHTO Group Index.
+#' @author Andrew G. Brown.
+#' @examples 
+#' ptf_aashind(.sieveno200 = 60, .ll = 44, .pi = 26, .aashtocl = "A-7-6")
+ptf_aashind <- function(.sieveno200,  .ll, .pi, .aashtocl = NULL) {
+  
+  # if AASHTO class is not specified, buffer it with NA
+  if(length(.aashtocl) == 0) {
+    .aashtocl <- rep(NA, length(.sieveno200))
+  }
+  
+  # calculate aashto group index number -- 
+  # base calc uses #200 Sieve and Plasticity Index
   aashind <- 0.01 * (.sieveno200 - 15) * (.pi - 10)
   
   # identify records that need a correction based on LL term
-  # (note: since aashto class is calculated from GIN... these would be a priori values or based on data)
   skipll <- (!is.na(.aashtocl) & 
                grepl(.aashtocl, pattern="[Aa]-2-[67]")) | 
                 (.sieveno200 < 35 & .pi >= 10)
@@ -29,7 +43,8 @@ ptf_aashind <- function(.sieveno200,  .ll, .pi, .aashtocl) {
                         (.2 + .005*(.ll[!skipll] - 40)) +
                           aashind[!skipll]
 
-  # any records with plasticty index of zero, or aashto index less than zero get AASHTO GIN of zero
+  # any records with plasticty index of zero, 
+  #  also, any aashto index less than zero are assigned 0
   low.plasticity <- which(.pi == 0 | aashind < 0)
   aashind[low.plasticity] <- 0
   
@@ -39,25 +54,20 @@ ptf_aashind <- function(.sieveno200,  .ll, .pi, .aashtocl) {
   return(aashind)
 }
 
-# helper function for L-RV-H data as individual arguments
-AASHTO_GIN <- function(.sieveno200_l, .sieveno200_r, .sieveno200_h, .ll_l, .ll_r, .ll_h, .pi_l, .pi_r, .pi_h, .aashtocl) {
-  dat.l <- data.frame(.sieveno200_l, .ll_l, .pi_l, .aashtocl)
-  dat.r <- data.frame(.sieveno200_r, .ll_r, .pi_r, .aashtocl)
-  dat.h <- data.frame(.sieveno200_h, .ll_h, .pi_h, .aashtocl)
-  gin.l <- ptf_aashind(dat.l[,1], dat.l[,2], dat.l[,3], dat.l[,4])
-  gin.r <- ptf_aashind(dat.r[,1], dat.r[,2], dat.r[,3], dat.r[,4])
-  gin.h <- ptf_aashind(dat.h[,1], dat.h[,2], dat.h[,3], dat.h[,4])
-  gin <- c(gin.l, gin.r, gin.h)
-  
-  # reorder the values -- TODO: how often is this necessary??? NASIS calc does reordering so low, RV, high come out "in order"
-  gin <- gin[order(gin)]
-  
-  res <- data.frame(calc_aashind_l=gin[1], calc_aashind_r=gin[2], calc_aashind_h=gin[3])
-  return(res)
-}
-
-# emulates running calculations on all horizons in a set of NASIS components (SoilProfileCollection)
-component_AASHTO_GIN <- function(components, FUN, ...) {
+#' @title AASHTO Group Index for NASIS/SSURGO components
+#' @description Runs AASHTO Group Index (\code{ptf_aashind}) calculations on all horizons in a set of NASIS/SSURGO components (SoilProfileCollection).
+#' @param components A \code{SoilProfileCollection} Object containing low, 
+#'  RV, and high values of the standard inputs and SSURGO/NASIS-naming
+#'  convention to \code{ptf_aashind}. E.g. \code{sieveno200_l}, \code{ll_r},
+#'  \code{pi_h}, \code{aashtocl}, etc.
+#' @param FUN A function to apply to the end result. Usually \code{floor}.
+#' @param ... Additional arguments to \code{FUN}.
+#' @return A \code{data.frame} containing L, RV and H calculated AASHTO Group Index ('calc_aashind_l','calc_aashind_r', 'calc_aashind_h').
+#' @author Andrew G. Brown.
+#' @seealso \code{\link{SDA_query}}, \code{\link{fetchNASIS_components}}
+#' @examples
+#' component_aashind(my.component.spc, floor).
+component_aashind <- function(components, FUN, ...) {
   res <- do.call('rbind', profileApply(components, FUN = function(p) {
       hz <- horizons(p)
       
