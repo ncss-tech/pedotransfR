@@ -1,8 +1,11 @@
-# Calculate AASHTO Group Index 
+# 15 AASHTO Group Index 
 # @purpose: Encode AASHTO Group Index Number (GIN) NASIS calculation into R pedotransfer function. 
 #           Also, provides wrapper functions for dealing with L-RV-H and NASIS component SoilProfileCollections
 
-# @inputs: % Passing #200 Sieve (sieveno200), Liquid Limit (ll), Plasticity Index (pi)
+# @inputs: 
+# - % Passing #200 Sieve (sieveno200)
+# - Liquid Limit (ll)
+# - Plasticity Index (pi)
 
 # @author: Cathy Seybold
 # @contributor: Andrew G. Brown
