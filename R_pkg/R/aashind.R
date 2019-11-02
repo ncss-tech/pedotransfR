@@ -22,13 +22,15 @@
 #' @author Andrew G. Brown.
 #' @examples 
 #' ptf_aashind(.sieveno200 = 60, .ll = 44, .pi = 26, .aashtocl = "A-7-6")
+#' @rdname ptf_aashind
+#' @export ptf_aashind
 ptf_aashind <- function(.sieveno200,  .ll, .pi, .aashtocl = NULL) {
   
   # if AASHTO class is not specified, buffer it with NA
   if(length(.aashtocl) == 0) {
     .aashtocl <- rep(NA, length(.sieveno200))
   }
-  
+   
   # calculate aashto group index number -- 
   # base calc uses #200 Sieve and Plasticity Index
   aashind <- 0.01 * (.sieveno200 - 15) * (.pi - 10)
@@ -67,6 +69,8 @@ ptf_aashind <- function(.sieveno200,  .ll, .pi, .aashtocl = NULL) {
 #' @seealso \code{\link{SDA_query}}, \code{\link{fetchNASIS_components}}
 #' @examples
 #' component_aashind(my.component.spc, floor).
+#' @rdname component_aashind
+#' @export component_aashind
 component_aashind <- function(components, FUN, ...) {
   res <- do.call('rbind', profileApply(components, FUN = function(p) {
       hz <- horizons(p)
