@@ -15,7 +15,7 @@ Get the latest development version from GitHub. This will require the latest ver
 remotes::install_github("ncss-tech/pedotransfR/R_pkg", dependencies=FALSE, upgrade=FALSE, build=FALSE)
 ```
 
-## Example: Compare Stored versus Calculated (in R) for some component data retrieved from Soil Data Access (SDA)
+## Example: Compare Stored versus Calculated AASHTO Group Index (in R) for some component data retrieved from Soil Data Access (SDA)
 
 ```r
 library(aqp)
@@ -64,7 +64,7 @@ if(length(aashto)) {
 newspc <- hz
 depths(newspc) <- cokey ~ hzdept_r + hzdepb_r
 
-# merge component_AASHTO_GIN() result into horizon table
+# merge component_aashind() result into horizon table
 horizons(newspc) <- merge(horizons(newspc), 
                           component_aashind(newspc, floor), 
                           by = c(idname(newspc), hzidname(newspc)))
