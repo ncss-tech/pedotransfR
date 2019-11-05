@@ -2,17 +2,17 @@ Package: pedotransfR
 Title: Pedotransfer Functions used by USDA-NRCS / NCSS
 Description: R package for computing and evaluating predictive functions of soil properties -- pedotransfer functions (PTFs). Pedotransfer functions are used with data collected through the National Cooperative Soil Survey. Typically, the PTFs are as-implemented in NASIS but may include additional options to facilitate analyses.
 Version: 0.0.0.1
-Authors@R: c(person(given="Dylan", family="Beaudette", role = c("aut", "cre"), email = "dylan.beaudette@ca.usda.gov"),person(given="Andrew", family="Brown", role = c("aut"), email = "andrew.g.brown@ca.usda.gov"))
+Authors@R: c(person(given="Dylan", family="Beaudette", role = c("aut", "cre"), email = "dylan.beaudette@usda.gov"),person(given="Andrew", family="Brown", role = c("aut","ctb"), email = "andrew.g.brown@usda.gov"))
 Author: Dylan Beaudette [aut, cre]
-Maintainer: Dylan Beaudette <dylan.beaudette@ca.usda.gov>
+Maintainer: Dylan Beaudette <dylan.beaudette@usda.gov>
 Depends: R (>= 3.4.1)
 License: GPL (>= 3)
 Encoding: UTF-8
 LazyLoad: yes
 Repository: CRAN
-URL: https://github.com/ncss-tech/pedotransfR
+URL: https://github.com/ncss-tech/pedotransfR/R_pkg
 BugReports: https://github.com/ncss-tech/pedotransfR/issues
 Imports: 
 Suggests: 
-    testthat
+    testthat, RODBC
 RoxygenNote: 6.1.1

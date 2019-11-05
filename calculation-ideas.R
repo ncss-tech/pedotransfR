@@ -1,8 +1,5 @@
 library(RODBC)
-
-# temporary until we get the package built
-source('getAndCacheCalculation.R')
-
+library(pedotransfR)
 
 ## save local copies of calculation code
 
