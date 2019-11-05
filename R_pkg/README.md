@@ -33,7 +33,7 @@ f.sub <- f
 # construct custom SDA queries to get more information about the above components
 comp.q <- paste0("SELECT * FROM component 
                   WHERE cokey IN ", 
-                    format_SQL_in_statement(site(f)$cokey), ";")
+                    format_SQL_in_statement(site(f.sub)$cokey), ";")
 comp <- SDA_query(comp.q)
 
 # get all horizon data corresponding to above components
@@ -91,14 +91,14 @@ legend("bottomright", legend = c("Model", "1:1"),
 abline(m0, col = "red", lwd = 2)
 abline(0, 1, col = "blue", lwd = 2, lty = 2)
 
-## TODO: mention this to dylan and cathy -- CVIR round is used in NASIS
+## TODO: mention this to dylan and cathy  -- CVIR round is used in NASIS
 ##       but in order to match data populated in SDA need to use floor()
 ## compare using floor() (above) with round
-# roundgin <- component_AASHTO_GIN(newspc, FUN=round, digits=1)
+# roundgin <- component_aashind(newspc, FUN=round, digits=0)
 # names(roundgin) <- c(names(roundgin)[1:2],
 #                      "round_aashind_l","round_aashind_r","round_aashind_h")
 # 
-# # merge component_AASHTO_GIN() result into horizon table
+# # merge component_aashind() result into horizon table
 # horizons(newspc) <- merge(horizons(newspc), roundgin, 
 #                           by = c(idname(newspc), hzidname(newspc)))
 # 
