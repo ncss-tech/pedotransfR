@@ -12,17 +12,20 @@ install.packages(c('stringdist', 'purrr', 'stringi', 'data.tree'), dep=TRUE)
 Get the latest development version from GitHub. This will require the latest version of `remotes` -- install that first from CRAN if you need it.
 
 ```r
+remotes::install_github("ncss-tech/aqp", dependencies=FALSE, upgrade=FALSE, build=FALSE)
+remotes::install_github("ncss-tech/soilDB", dependencies=FALSE, upgrade=FALSE, build=FALSE)
 remotes::install_github("ncss-tech/pedotransfR/R_pkg", dependencies=FALSE, upgrade=FALSE, build=FALSE)
 ```
 
-## Example: Compare Stored versus Calculated AASHTO Group Index (in R) for some component data retrieved from Soil Data Access (SDA)
+## Example: Compare Stored versus Calculated 
+#### AASHTO Group Index calculated in R with data from Soil Data Access (SDA)
 
 ```r
 library(aqp)
 library(soilDB)
 library(pedotransfR)
 
-# use soilDB fetch function to get some soils information from SDA 
+# use soilDB fetch function to get basic soils information from SDA 
 #   these are soils with varying amounts of ASP -- wide range in aashto gin
 f <- fetchSDA_component(WHERE = "compname IN ('Mantree','Redapple',
                         'Devilsnose','Lilygap')")
@@ -30,10 +33,10 @@ f <- fetchSDA_component(WHERE = "compname IN ('Mantree','Redapple',
 # optional: subset with e.g. subsetProfiles()
 f.sub <- f
 
-# construct custom SDA queries to get more information about the above components
+# construct SDA queries to get more information about the above components
 comp.q <- paste0("SELECT * FROM component 
                   WHERE cokey IN ", 
-                    format_SQL_in_statement(site(f.sub)$cokey), ";")
+                    format_SQL_in_statement(site(f)$cokey), ";")
 comp <- SDA_query(comp.q)
 
 # get all horizon data corresponding to above components
@@ -65,9 +68,7 @@ newspc <- hz
 depths(newspc) <- cokey ~ hzdept_r + hzdepb_r
 
 # merge component_aashind() result into horizon table
-horizons(newspc) <- merge(horizons(newspc), 
-                          component_aashind(newspc, floor), 
-                          by = c(idname(newspc), hzidname(newspc)))
+horizons(newspc) <- component_aashind(newspc, floor)
 
 # fit linear model to stored versus calculated
 m0 <- lm(newspc$calc_aashind_r ~ newspc$aashind_r)
@@ -91,19 +92,22 @@ legend("bottomright", legend = c("Model", "1:1"),
 abline(m0, col = "red", lwd = 2)
 abline(0, 1, col = "blue", lwd = 2, lty = 2)
 
-## TODO: mention this to dylan and cathy  -- CVIR round is used in NASIS
+## TODO: mention this to dylan and cathy -- CVIR round() is used in NASIS
 ##       but in order to match data populated in SDA need to use floor()
-## compare using floor() (above) with round
+
+## compare: using floor() (above) v.s. round
 # roundgin <- component_aashind(newspc, FUN=round, digits=0)
+#
+## change default column names, but leave ID columns (1 and 2) alone
 # names(roundgin) <- c(names(roundgin)[1:2],
 #                      "round_aashind_l","round_aashind_r","round_aashind_h")
 # 
-# # merge component_aashind() result into horizon table
-# horizons(newspc) <- merge(horizons(newspc), roundgin, 
-#                           by = c(idname(newspc), hzidname(newspc)))
+## merge component_aashind() result into horizon table
+# horizons(newspc) <- roundgin
 # 
+## slightly higher than calculated values extracted from ssurgo/nasis
 # points(newspc$round_aashind_r ~ newspc$aashind_r, pch="*")
-# names(table(newspc$aashind_r))
-# 
-```
+#
+## certain values never occur in aashind
+# table(newspc$aashind_r)
 ```
