@@ -22,13 +22,12 @@ saxton_1986_Ksat(sand, silt, clay)
 \item{theta}{_numeric_; water content percentage}
 }
 \value{
-a _numeric_ vector of estimate hydraulic conductivity at specified water content given sand, silt and clay percentages
+_numeric_ estimates of hydraulic conductivity at specified water content given sand, silt and clay percentages
 }
 \description{
 Estimate Hydraulic Conductivity using Saxton et al. (1986)
 }
 \examples{
-
 # estimate saturated water content 80\% sand, 10\% clay
 theta_s <- saxton_1986_theta_s(80, 10)
 
@@ -38,4 +37,7 @@ saxton_1986_K(80, 10, 10, theta = theta_s / 2)
 # estimate hydraulic conductivity at saturation
 saxton_1986_Ksat(80, 10, 10)
 
+}
+\references{
+Saxton, K.E., W.J. Rawls, J.S. Romberger, R.I. Papendick. Estimating generalized soil-water characteristics from texture. Soil Sci. Soc. Am. J. 50: 1031-1036.
 }

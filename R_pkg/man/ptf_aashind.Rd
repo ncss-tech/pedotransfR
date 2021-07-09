@@ -4,16 +4,16 @@
 \alias{ptf_aashind}
 \title{AASHTO Group Index}
 \usage{
-ptf_aashind(.sieveno200, .ll, .pi, .aashtocl = NULL)
+ptf_aashind(sieveno200, ll, pi, aashtocl = NULL)
 }
 \arguments{
-\item{.sieveno200}{A numeric vector containing \% Passing #200 Sieve.}
+\item{sieveno200}{A numeric vector containing \% Passing #200 Sieve.}
 
-\item{.ll}{A numeric vector containing Liquid Limit.}
+\item{ll}{A numeric vector containing Liquid Limit.}
 
-\item{.pi}{A numeric vector containing Plasticity Index.}
+\item{pi}{A numeric vector containing Plasticity Index.}
 
-\item{.aashtocl}{optional: A character vector containing AASHTO Class 
+\item{aashtocl}{optional: A character vector containing AASHTO Class 
 (to identify A-2-6, A-2-7 & A-8). default: NULL;}
 }
 \value{

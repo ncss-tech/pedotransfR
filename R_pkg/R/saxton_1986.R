@@ -15,11 +15,11 @@ saxton_1986_theta_s <- function(sand, clay) {
 #' @param clay _numeric_; clay percentage
 #' @param theta _numeric_; water content percentage
 #'
-#' @return a _numeric_ vector of estimate hydraulic conductivity at specified water content given sand, silt and clay percentages
+#' @return _numeric_ estimates of hydraulic conductivity at specified water content given sand, silt and clay percentages
 #' @export
 #' @aliases saxton_1986_theta_s saxton_1986_K saxton_1986_Ksat
+#' @references Saxton, K.E., W.J. Rawls, J.S. Romberger, R.I. Papendick. Estimating generalized soil-water characteristics from texture. Soil Sci. Soc. Am. J. 50: 1031-1036.
 #' @examples
-#' 
 #' # estimate saturated water content 80% sand, 10% clay
 #' theta_s <- saxton_1986_theta_s(80, 10)
 #' 

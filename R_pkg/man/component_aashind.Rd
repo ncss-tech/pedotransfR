@@ -25,9 +25,6 @@ Runs AASHTO Group Index (\code{ptf_aashind}) calculations on all horizons in a s
 \examples{
 component_aashind(my.component.spc, floor).
 }
-\seealso{
-\code{\link{SDA_query}}, \code{\link{fetchNASIS_components}}
-}
 \author{
 Andrew G. Brown.
 }
