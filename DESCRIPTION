@@ -12,7 +12,7 @@ LazyLoad: yes
 Repository: CRAN
 URL: https://github.com/ncss-tech/pedotransfR/R_pkg
 BugReports: https://github.com/ncss-tech/pedotransfR/issues
-Imports: 
 Suggests: 
-    testthat
+    testthat (>= 3.0.0)
 RoxygenNote: 7.1.1
+Config/testthat/edition: 3
