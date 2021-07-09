@@ -17,14 +17,11 @@ convention to \code{ptf_aashind}. E.g. \code{sieveno200_l}, \code{ll_r},
 \item{...}{Additional arguments to \code{FUN}.}
 }
 \value{
-A \code{data.frame} containing L, RV and H calculated AASHTO Group Index ('calc_aashind_l','calc_aashind_r', 'calc_aashind_h').
+A \code{data.frame} containing L, RV and H calculated AASHTO Group Index ('calc_aashind_l','calc_aashind_r', 'calc_aashind_h')
 }
 \description{
 Runs AASHTO Group Index (\code{ptf_aashind}) calculations on all horizons in a set of NASIS/SSURGO components (SoilProfileCollection).
 }
-\examples{
-component_aashind(my.component.spc, floor).
-}
 \author{
-Andrew G. Brown.
+Andrew G. Brown
 }

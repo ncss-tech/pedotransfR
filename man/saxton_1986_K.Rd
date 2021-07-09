@@ -31,10 +31,10 @@ Estimate Hydraulic Conductivity using Saxton et al. (1986)
 theta_s <- saxton_1986_theta_s(80, 10)
 
 # estimate hydraulic conductivity at 50\% porosity filled with water
-saxton_1986_K(80, 10, 10, theta = theta_s / 2)
+saxton_1986_K(80, 10, theta = theta_s / 2)
 
 # estimate hydraulic conductivity at saturation
-saxton_1986_Ksat(80, 10, 10)
+saxton_1986_Ksat(80, 10)
 
 }
 \references{

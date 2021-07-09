@@ -21,13 +21,13 @@
 # @last_update: 11/01/2019
 # @nasis_last_update: 6/12/2019
 
-ptf_db13bar <- function(.taxorder, .taxsuborder, .taxgreatgroup, .taxsubgrp, 
-                        .hzdept, .hzdepb, .hzname, 
-                        .sandvc, .sandco, .sandmed, .sandfine, .sandvf, 
-                        .sandtotal, .silttotal, .claytotal,
-                        .om, .gypsum, .ksat, .texture) {
+ptf_db13bar <- function(taxorder, taxsuborder, taxgreatgroup, taxsubgrp, 
+                        hzdept, hzdepb, hzname, 
+                        sandvc, sandco, sandmed, sandfine, sandvf, 
+                        sandtotal, silttotal, claytotal,
+                        om, gypsum, ksat, texture) {
   
-  oc <- .om / 1.72
+  oc <- om / 1.72
   # ASSIGNS A, B, & C hznames when "H" is present.
   hzname[grepl(hzname, pattern='^H1$')] <- "A"
   hzname[grepl(hzname, pattern='^H[23]$')] <- "B"
@@ -53,14 +53,14 @@ ptf_db13bar <- function(.taxorder, .taxsuborder, .taxgreatgroup, .taxsubgrp,
                groups="texture_fam", lut.dist.var = "carbon", property="db_13b") 
   
   # gypsum (>40%) -- uses rv gypsum content (relative to lookup table) as distance metric
-  wt_BD_gyp40 <- do_nn_lookup(filename="../data/bd_gypsum", target=NA, dist.var=gypsum_r,
+  wt_BD_gyp40 <- do_nn_lookup(filename="../data/bd_gypsum", target=NA, dist.var=gypsum,
                             lut.names=c('ghzn_top' , 'ghzn_bot' , 'ghzn_desgn' , 'ghzn_master' , 'gsand' , 'gsilt' , 
                            'gclay' , 'gcarbon' , 'g_db_13b' , 'c_gypl2' , 'gw3cld' , 'gw15l2'),
                             groups=NA, lut.dist.var = "c_gypl2", property="g_db_13b") 
-  wt_BD_gyp40[gypsum_r < 40] <- NA
+  wt_BD_gyp40[gypsum < 40] <- NA
   
   # gypsum (<=40%)
-  wt_BD_gyp <- do_normalized_nn_lookup(filename="../data/bd_gypsum", target=NA, dist.var=gypsum_r,
+  wt_BD_gyp <- do_normalized_nn_lookup(filename="../data/bd_gypsum", target=NA, dist.var=gypsum,
                               lut.names=c('ghzn_top' , 'ghzn_bot' , 'ghzn_desgn' , 'ghzn_master' , 'gsand' , 'gsilt' , 
                                           'gclay' , 'gcarbon' , 'g_db_13b' , 'c_gypl2' , 'gw3cld' , 'gw15l2'),
                               normalize.names=list('sandtotal_r' = 'gsand' , 

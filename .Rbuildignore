@@ -1,3 +1,5 @@
 ^SoilTaxonomy\.Rproj$
 ^\.Rproj\.user$
 ^misc$
+^docs$
+\.Rproj$

@@ -11,6 +11,7 @@ LazyLoad: yes
 Repository: CRAN
 URL: https://github.com/ncss-tech/pedotransfR/
 BugReports: https://github.com/ncss-tech/pedotransfR/issues
+Imports: aqp, soilDB
 Suggests: 
     testthat (>= 3.0.0)
 RoxygenNote: 7.1.1

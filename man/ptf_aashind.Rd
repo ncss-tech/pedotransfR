@@ -23,7 +23,7 @@ A numeric vector containing calculated AASHTO Group Index.
 R pedotransfer function derived from AASHTO Group Index NASIS calculation.
 }
 \examples{
-ptf_aashind(.sieveno200 = 60, .ll = 44, .pi = 26, .aashtocl = "A-7-6")
+ptf_aashind(sieveno200 = 60, ll = 44, pi = 26, aashtocl = "A-7-6")
 }
 \author{
 Andrew G. Brown.

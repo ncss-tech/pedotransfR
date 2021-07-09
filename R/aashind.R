@@ -21,7 +21,7 @@
 #' @return A numeric vector containing calculated AASHTO Group Index.
 #' @author Andrew G. Brown.
 #' @examples 
-#' ptf_aashind(.sieveno200 = 60, .ll = 44, .pi = 26, .aashtocl = "A-7-6")
+#' ptf_aashind(sieveno200 = 60, ll = 44, pi = 26, aashtocl = "A-7-6")
 #' @rdname ptf_aashind
 #' @export ptf_aashind
 ptf_aashind <- function(sieveno200,  ll, pi, aashtocl = NULL) {
@@ -64,14 +64,12 @@ ptf_aashind <- function(sieveno200,  ll, pi, aashtocl = NULL) {
 #'  \code{pi_h}, \code{aashtocl}, etc.
 #' @param FUN A function to apply to the end result. Usually \code{floor}.
 #' @param ... Additional arguments to \code{FUN}.
-#' @return A \code{data.frame} containing L, RV and H calculated AASHTO Group Index ('calc_aashind_l','calc_aashind_r', 'calc_aashind_h').
-#' @author Andrew G. Brown.
-#' @examples
-#' component_aashind(my.component.spc, floor).
-#' @rdname component_aashind
-#' @export component_aashind
-#' @importFrom aqp horizons profileApply
-#' @importFrom soilDB fetchNASIS 
+#' @return A \code{data.frame} containing L, RV and H calculated AASHTO Group Index ('calc_aashind_l','calc_aashind_r', 'calc_aashind_h')
+#' @author Andrew G. Brown
+#' @importFrom aqp horizons profileApply idname hzidname
+#' @importFrom soilDB fetchNASIS fetchSDA
+#' @importFrom stats complete.cases sd weighted.mean 
+#' @importFrom utils read.table 
 component_aashind <- function(components, FUN, ...) {
   res <- do.call('rbind', profileApply(components, FUN = function(p) {
       hz <- horizons(p)
@@ -87,18 +85,15 @@ component_aashind <- function(components, FUN, ...) {
       # operate on complete sets of L, R, H independently...
       # but also, leave records as place holders <NA> where incomplete data occur
       hz[,c('calc_aashind_l','calc_aashind_r', 'calc_aashind_h')] <- NA
-      hz[hz.ok_h,] <- within(hz[hz.ok_h,], {
-        calc_aashind_h <- ptf_aashind(sieveno200_h, ll_h, pi_h, aashtocl)
-      })
       
-      hz[hz.ok_r,] <- within(hz[hz.ok_r,], {
-        calc_aashind_r <- ptf_aashind(sieveno200_r, ll_r, pi_r, aashtocl)
-      })
+      hhi <- hz[hz.ok_h, ]
+      hr <- hz[hz.ok_r, ]
+      hlo <- hz[hz.ok_l, ]
       
-      hz[hz.ok_l,] <- within(hz[hz.ok_l,], {
-        calc_aashind_l <- ptf_aashind(sieveno200_l, ll_l, pi_l, aashtocl)
-      })
-       
+      hz[hz.ok_h, ]$calc_aashind_h <- ptf_aashind(hhi$sieveno200_h, hhi$ll_h, hhi$pi_h, hhi$aashtocl)
+      hz[hz.ok_r, ]$calc_aashind_r <- ptf_aashind(hr$sieveno200_h, hr$ll_r, hr$pi_r, hr$aashtocl)
+      hz[hz.ok_l, ]$calc_aashind_l <- ptf_aashind(hlo$sieveno200_l, hlo$ll_l, hlo$pi_l, hlo$aashtocl)
+      
       # TODO: No reordering L-R-H that may be mismatched
       # how often is this needed?
       
@@ -110,9 +105,7 @@ component_aashind <- function(components, FUN, ...) {
       }
       
       # format for easy merging back into parent spc
-      return(hz[ ,c(idname(p), 
-                    hzidname(p),
-                    'calc_aashind_l','calc_aashind_r', 'calc_aashind_h')])
+      return(hz[ , c(idname(p), hzidname(p), 'calc_aashind_l','calc_aashind_r', 'calc_aashind_h')])
     }, simplify = FALSE))
   rownames(res) <- NULL
   return(res)
