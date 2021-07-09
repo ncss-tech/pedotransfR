@@ -71,7 +71,7 @@ ptf_aashind <- function(sieveno200,  ll, pi, aashtocl = NULL) {
 #' @rdname component_aashind
 #' @export component_aashind
 #' @importFrom aqp horizons profileApply
-#' @importFrom soilDB fetchNASIS get
+#' @importFrom soilDB fetchNASIS 
 component_aashind <- function(components, FUN, ...) {
   res <- do.call('rbind', profileApply(components, FUN = function(p) {
       hz <- horizons(p)
