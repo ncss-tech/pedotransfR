@@ -57,8 +57,13 @@ if(length(aashto)) {
 newspc <- hz
 depths(newspc) <- cokey ~ hzdept_r + hzdepb_r
 
-# merge component_aashind() result into horizon table
-horizons(newspc) <- component_aashind(newspc, floor)
+# calculate aashto index, take floor() for comparison with integer value in nasis
+newspc$calc_aashind_r <- floor(ptf_aashind(
+  newspc$sieveno200_r,
+  newspc$ll_r,
+  newspc$pi_r,
+  newspc$aashtocl
+))
 
 # fit linear model to stored versus calculated
 m0 <- lm(newspc$calc_aashind_r ~ newspc$aashind_r)
